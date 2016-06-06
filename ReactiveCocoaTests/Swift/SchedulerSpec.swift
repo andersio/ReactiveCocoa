@@ -26,7 +26,7 @@ class SchedulerSpec: QuickSpec {
 		}
 
 		describe("UIScheduler") {
-			func dispatchSyncInBackground(action: () -> ()) {
+			func dispatchSyncInBackground(action: () -> Void) {
 				let group = dispatch_group_create()
 				dispatch_group_async(group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), action)
 				dispatch_group_wait(group, DISPATCH_TIME_FOREVER)
@@ -151,7 +151,7 @@ class SchedulerSpec: QuickSpec {
 					for _ in 0..<5 {
 						scheduler.schedule {
 							expect(NSThread.isMainThread()) == false
-							value++
+							value += 1
 						}
 					}
 
@@ -183,7 +183,9 @@ class SchedulerSpec: QuickSpec {
 					disposable.innerDisposable = scheduler.scheduleAfter(NSDate(), repeatingEvery: 0.01, withLeeway: 0) {
 						expect(NSThread.isMainThread()) == false
 
-						if ++count == timesToRun {
+						count += 1
+
+						if count == timesToRun {
 							disposable.dispose()
 						}
 					}
