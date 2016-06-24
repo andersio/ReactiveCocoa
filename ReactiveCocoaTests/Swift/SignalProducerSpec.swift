@@ -866,6 +866,11 @@ class SignalProducerSpec: QuickSpec {
 				let scheduler = TestScheduler()
 				let producer = timer(1, onScheduler: scheduler, withLeeway: 0)
 
+				let startDate = scheduler.currentDate
+				let tick1 = startDate.dateByAddingTimeInterval(1)
+				let tick2 = startDate.dateByAddingTimeInterval(2)
+				let tick3 = startDate.dateByAddingTimeInterval(3)
+
 				var dates: [NSDate] = []
 				producer.startWithNext { dates.append($0) }
 
@@ -873,18 +878,16 @@ class SignalProducerSpec: QuickSpec {
 				expect(dates) == []
 
 				scheduler.advanceByInterval(1)
-				let firstTick = scheduler.currentDate
-				expect(dates) == [firstTick]
+				expect(dates) == [tick1]
 
 				scheduler.advance()
-				expect(dates) == [firstTick]
+				expect(dates) == [tick1]
 
 				scheduler.advanceByInterval(0.2)
-				let secondTick = scheduler.currentDate
-				expect(dates) == [firstTick, secondTick]
+				expect(dates) == [tick1, tick2]
 
 				scheduler.advanceByInterval(1)
-				expect(dates) == [firstTick, secondTick, scheduler.currentDate]
+				expect(dates) == [tick1, tick2, tick3]
 			}
 
 			it("should release the signal when disposed") {
@@ -1686,6 +1689,25 @@ class SignalProducerSpec: QuickSpec {
 
 				let result = original.then(subsequent).first()
 				expect(result?.error) == TestError.Default
+			}
+
+			it("should forward interruptions from the original producer") {
+				let (original, observer) = SignalProducer<Int, NoError>.pipe()
+
+				var subsequentStarted = false
+				let subsequent = SignalProducer<Int, NoError> { observer, _ in
+					subsequentStarted = true
+				}
+
+				var interrupted = false
+				let producer = original.then(subsequent)
+				producer.startWithInterrupted {
+					interrupted = true
+				}
+				expect(subsequentStarted) == false
+
+				observer.sendInterrupted()
+				expect(interrupted) == true
 			}
 
 			it("should complete when both inputs have completed") {
